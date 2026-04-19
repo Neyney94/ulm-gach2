@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Events ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=43JsO6DdDjgSgHeHQ6boqRKlri66YGSPpFjdqo0hlHqtf8zih830ikN_CGOqv0RCFUXQLY9EFfwswc4PNmurxtRPXlBm9miePC_tzK4llfNYqoGey_-uiVnMna0Gs2x9EUnh0ohPYAV8Jk1nMEd_5CRZxV4fVRJ8M_6LW3Awa0sI98udY_JFj1DOnb2wnN2N" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZldmVudHMuaHRtbA"/></head>
+
+<body>
+
+<div class="sidebar">
+    <h2 class="sidebar-title">
+        <img src="logo.png" alt="ULM Logo" class="sidebar-logo">
+        ULM
+    </h2>
+
+    <a href="dashboard.html">Accueil</a>
+    <a href="contrat.html" id="linkContrat">Demande de contrat</a>
+    <a href="employes.html" id="linkEmployes">Créer un employé</a>
+    <a href="licenciement.html" id="linkLicenciement">Licenciement</a>
+    <a href="reception.html" id="linkReception">Réception RH</a>
+    <a href="classement-admin.html" id="linkClassement">Classement</a>
+    <a href="#" onclick="openAdmin()">Admin</a>
+    <a href="events.html">Events</a>
+
+    <button class="sidebar-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="main">
+
+<h1>📅 Events ULM</h1>
+
+<div class="contract-form" id="eventFormContainer" style="margin-bottom:40px;">
+
+<h2 style="margin-bottom:20px;">Créer un event</h2>
+
+<form id="eventForm">
+
+<div class="form-group">
+<label>Nom de l’event</label>
+<input type="text" id="eventName" required>
+</div>
+
+<div class="form-group">
+<label>Date</label>
+<input type="date" id="eventDate" required>
+</div>
+
+<div class="form-group">
+<label>Organisateur</label>
+<input type="text" id="eventOrganiser" required>
+</div>
+
+<div class="form-group">
+<label>Numéro</label>
+<input type="text" id="eventPhone" required>
+</div>
+
+<div class="form-group">
+<label>Entreprise</label>
+<input type="text" id="eventCompany" required>
+</div>
+
+<div class="form-group">
+<label>Heure de début</label>
+<input type="time" id="eventStart" required>
+</div>
+
+<div class="form-group">
+<label>Heure de fin</label>
+<input type="time" id="eventEnd" required>
+</div>
+
+<div class="form-group">
+<label>Description</label>
+<textarea id="eventDescription" rows="4" required></textarea>
+</div>
+
+<button type="submit" class="modern-btn">Créer l’event</button>
+
+</form>
+</div>
+
+<div class="employee-list">
+<h2>📋 Events programmés</h2>
+<div id="eventContainer"></div>
+</div>
+
+</div>
+
+<script>
+
+/* ================= LOGIN ================= */
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+if (!currentUser) window.location.href = "/";
+
+/* ================= GESTION ROLES ================= */
+
+if (currentUser.role === "Manager") {
+    document.getElementById("eventFormContainer").style.display = "none";
+}
+
+/* ================= STATUT ================= */
+
+function getStatus(date, start, end) {
+
+    const now = new Date();
+    const startDate = new Date(date + "T" + start);
+    const endDate = new Date(date + "T" + end);
+
+    if (now < startDate) return { text: "🟢 À venir", class: "status-upcoming" };
+    if (now >= startDate && now <= endDate) return { text: "🔵 En cours", class: "status-live" };
+    return { text: "🔴 Terminé", class: "status-finished" };
+}
+
+/* ================= LOAD EVENTS ================= */
+
+async function loadEvents() {
+
+    const res = await fetch("api/get_events.php");
+    const events = await res.json();
+
+    const container = document.getElementById("eventContainer");
+    container.innerHTML = "";
+
+    if (!events.length) {
+        container.innerHTML = "<p style='color:#777;'>Aucun event programmé.</p>";
+        return;
+    }
+
+    events.forEach(event => {
+
+        const status = getStatus(event.date_event, event.start_time, event.end_time);
+
+        container.innerHTML += `
+        <div class="employee-card">
+            <p><strong>${event.name}</strong></p>
+            <p>📅 Date : ${event.date_event}</p>
+            <p>📊 Statut : <span class="${status.class}">${status.text}</span></p>
+            <p>👤 Organisateur : ${event.organiser}</p>
+            <p>📞 Numéro : ${event.phone}</p>
+            <p>🏢 Entreprise : ${event.company}</p>
+            <p>⏰ Horaire : ${event.start_time} - ${event.end_time}</p>
+            <p style="margin-top:10px;color:#cfcfcf;">
+                ${event.description}
+            </p>
+
+            ${
+                currentUser.role !== "Manager"
+                ? `<div class="employee-actions">
+                    <button class="delete-btn" onclick="deleteEvent(${event.id})">
+                        🗑 Supprimer
+                    </button>
+                   </div>`
+                : ""
+            }
+        </div>
+        `;
+    });
+}
+
+/* ================= CREATE EVENT ================= */
+
+document.getElementById("eventForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const data = {
+        name: eventName.value,
+        date: eventDate.value,
+        organiser: eventOrganiser.value,
+        phone: eventPhone.value,
+        company: eventCompany.value,
+        start: eventStart.value,
+        end: eventEnd.value,
+        description: eventDescription.value
+    };
+
+    await fetch("api/add_event.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    if (typeof sendLog === "function") {
+        sendLog("Création event", data.name);
+    }
+
+    this.reset();
+    loadEvents();
+});
+
+/* ================= DELETE ================= */
+
+async function deleteEvent(id) {
+
+    await fetch("api/delete_event.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+
+    loadEvents();
+}
+
+/* ================= ADMIN ================= */
+
+function openAdmin() {
+    if (currentUser.role !== "Director Human Resources") {
+        alert("🚫 Accès interdit");
+        return;
+    }
+    window.location.href = "admin-rh.html";
+}
+
+/* ================= LOGOUT ================= */
+
+function logout() {
+    localStorage.removeItem("ulmUser");
+    window.location.href = "index.html";
+}
+
+document.addEventListener("DOMContentLoaded", loadEvents);
+
+/* ================= ROLES ================= */
+
+if (currentUser.role === "Manager") {
+    linkEmployes.style.display = "none";
+    linkReception.style.display = "none";
+    linkClassement.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+if (currentUser.role === "CM") {
+    linkContrat.style.display = "none";
+    linkEmployes.style.display = "none";
+    linkLicenciement.style.display = "none";
+    linkReception.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+
+</script>
+
+<script src="logs.js"></script>
+
+</body>
+</html>

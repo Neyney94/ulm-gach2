@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=9p_7hx_KIi2e1jm6FDQBJnW--Mpk-jM1QXSixATKVSul_fD-V39fgxRIcebnX4nJynKb1_gRXLiGsAeHn2NStplpxrXKtZPfDWlArQeXuoO99wriUbRq7kPdgY59JW6hhn6Ml5aiIWeY6bAwacORP0tmaduWNYl5-tEHXVC9BaMemRmtzjczw6oXJLdaB6pn" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZkYXNoYm9hcmQuaHRtbA"/></head>
+
+<body>
+
+<div class="sidebar">
+    <h2 class="sidebar-title">
+        <img src="logo.png" alt="ULM Logo" class="sidebar-logo">
+        ULM
+    </h2>
+
+    <a href="dashboard.html">Accueil</a>
+    <a href="contrat.html" id="linkContrat">Demande de contrat</a>
+    <a href="employes.html" id="linkEmployes">Créer un employé</a>
+    <a href="licenciement.html" id="linkLicenciement">Licenciement</a>
+    <a href="reception.html" id="linkReception">Reception RH</a>
+    <a href="classement-admin.html" id="linkClassement">Classement</a>
+    <a href="#" onclick="openAdmin()">Admin</a>
+    <a href="events.html">Events</a>
+
+    <button class="sidebar-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="main">
+
+<h1>Dashboard</h1>
+
+<div class="stats-grid">
+
+    <div class="stat-box clickable" id="contratBox" onclick="goReception()">
+        <h3 id="contratCount">0</h3>
+        <p>
+            Contrats en attente
+            <span id="contratBadge" class="badge"></span>
+        </p>
+    </div>
+
+    <div class="stat-box clickable" id="licenciementBox" onclick="goReception()">
+        <h3 id="licenciementCount">0</h3>
+        <p>
+            Licenciements
+            <span id="licenciementBadge" class="badge"></span>
+        </p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="employeeCount">0</h3>
+        <p>Employés ULM</p>
+    </div>
+
+</div>
+
+<div class="ranking-section">
+    <h1>🏆 Top Rappeurs de la Semaine</h1>
+    <div class="ranking-container" id="rankingContainer"></div>
+</div>
+
+<footer class="footer">
+    © Tous droits réservés 2026
+</footer>
+
+<script>
+
+/* ================= LOGIN ================= */
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+if (!currentUser) window.location.href = "/";
+
+/* ================= ROLES ================= */
+
+if (currentUser.role === "Manager") {
+    linkEmployes.style.display = "none";
+    linkReception.style.display = "none";
+    linkClassement.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+if (currentUser.role === "CM") {
+    linkContrat.style.display = "none";
+    linkEmployes.style.display = "none";
+    linkLicenciement.style.display = "none";
+    linkReception.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+/* ================= CLASSEMENT MYSQL ================= */
+
+async function loadRanking() {
+
+    try {
+
+        const res = await fetch("api/get_ranking.php");
+        const ranking = await res.json();
+
+        const container = document.getElementById("rankingContainer");
+        container.innerHTML = "";
+
+        if (!ranking.length) {
+            container.innerHTML = "<p style='color:#777;'>Aucun classement disponible.</p>";
+            return;
+        }
+
+        ranking.forEach((artist, index) => {
+
+            let medal = index === 0 ? "🥇" :
+                        index === 1 ? "🥈" :
+                        index === 2 ? "🥉" :
+                        index + 1;
+
+            let specialClass = index === 0 ? "first" :
+                               index === 1 ? "second" :
+                               index === 2 ? "third" : "";
+
+            container.innerHTML += `
+                <div class="ranking-card ${specialClass}">
+                    <div class="rank-number">${medal}</div>
+                    <h3>${artist.name}</h3>
+                    <p>🔥 ${artist.streams}</p>
+                </div>
+            `;
+        });
+
+    } catch (error) {
+        console.error("Erreur chargement classement :", error);
+    }
+}
+
+/* ================= STATS MYSQL ================= */
+
+async function loadStats() {
+
+    try {
+
+        const res = await fetch("api/get_stats.php");
+        const data = await res.json();
+
+        const contrats = parseInt(data.contrats) || 0;
+        const licenciements = parseInt(data.licenciements) || 0;
+        const employes = parseInt(data.employes) || 0;
+
+        contratCount.innerText = contrats;
+        licenciementCount.innerText = licenciements;
+        employeeCount.innerText = employes;
+
+        contratBadge.innerText = "";
+        licenciementBadge.innerText = "";
+
+        contratBadge.classList.remove("badge-active");
+        licenciementBadge.classList.remove("badge-active");
+
+        if (contrats > 0) {
+            contratBadge.innerText = contrats;
+            contratBadge.classList.add("badge-active");
+        }
+
+        if (licenciements > 0) {
+            licenciementBadge.innerText = licenciements;
+            licenciementBadge.classList.add("badge-active");
+        }
+
+    } catch (error) {
+        console.error("Erreur chargement stats :", error);
+    }
+}
+
+/* ================= NAVIGATION ================= */
+
+function goReception() {
+    if (currentUser.role === "Admin" || currentUser.role === "Director Human Resources") {
+        window.location.href = "reception.html";
+    }
+}
+
+function openAdmin() {
+    if (currentUser.role !== "Director Human Resources") {
+        showAccessDenied();
+        return;
+    }
+    window.location.href = "admin-rh.html";
+}
+
+function showAccessDenied() {
+
+    const notif = document.createElement("div");
+    notif.innerText = "🚫 Accès interdit";
+
+    notif.style.position = "fixed";
+    notif.style.top = "20px";
+    notif.style.right = "20px";
+    notif.style.background = "#151515";
+    notif.style.color = "#ff4d4d";
+    notif.style.padding = "15px 20px";
+    notif.style.border = "1px solid #ff4d4d";
+    notif.style.borderRadius = "10px";
+    notif.style.boxShadow = "0 0 15px rgba(255,0,0,0.3)";
+    notif.style.zIndex = "9999";
+    notif.style.fontSize = "14px";
+
+    document.body.appendChild(notif);
+
+    setTimeout(() => notif.remove(), 2500);
+}
+
+/* ================= LOGOUT ================= */
+
+function logout() {
+    localStorage.removeItem("ulmUser");
+    window.location.href = "index.html";
+}
+
+/* ================= INIT ================= */
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadStats();
+    loadRanking();
+    setInterval(loadStats, 10000);
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Connexion ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=e606BIANv2nwQd82pShcdUoySZjk3rWLPdEPbtfsTyK9WmQ7IQpYVUpX6DpJuBpAuk_lmOM3JgkmPcnjBzaq0RFnSXtL8dbD0wd6Zf_aWNpnFsCSOpHDrBGzNyGd8B2VSAdsLLbNcMjbmRVethw1WjFRffPRGjYHBZTvhzmNzzUPJsWy7vY_Gzm70ulPXWZZ" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZpbmRleC5odG1s"/><script src="logs.js"></script>
+</head>
+
+<body class="login-container">
+
+<div class="login-box">
+
+    <h1>ULM</h1>
+
+    <div class="form-group">
+        <label>Utilisateur</label>
+        <input type="text" id="username" required>
+    </div>
+
+    <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="password" id="password" required>
+    </div>
+
+    <div style="margin:10px 0;">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe" style="font-size:13px;">Se souvenir de moi</label>
+    </div>
+
+    <button class="modern-btn" onclick="login()">
+        Se connecter
+    </button>
+
+    <p id="loginError" style="color:#ff4d4d; text-align:center; margin-top:15px;"></p>
+
+</div>
+
+<script>
+
+/* ================= AUTO REMPLISSAGE ================= */
+
+document.addEventListener("DOMContentLoaded", function() {
+
+    const savedUser = localStorage.getItem("rememberedUser");
+
+    if (savedUser) {
+        document.getElementById("username").value = savedUser;
+        document.getElementById("rememberMe").checked = true;
+    }
+});
+
+/* ================= LOGIN MYSQL ================= */
+
+async function login() {
+
+    const userInput = document.getElementById("username").value.trim();
+    const passInput = document.getElementById("password").value.trim();
+    const remember = document.getElementById("rememberMe").checked;
+    const errorBox = document.getElementById("loginError");
+
+    errorBox.innerText = "";
+
+    if (!userInput || !passInput) {
+        errorBox.innerText = "Veuillez remplir tous les champs.";
+        return;
+    }
+
+    try {
+
+        /* ===== LOGIN SQL ===== */
+
+        const response = await fetch("api/login.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: userInput,
+                password: passInput
+            })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+
+            if (typeof sendLog === "function") {
+                sendLog("Connexion échouée", "Utilisateur tenté : " + userInput);
+            }
+
+            errorBox.innerText = "Identifiants incorrects";
+            return;
+        }
+
+        const user = result.user;
+
+        /* ===== CHECK MAINTENANCE ===== */
+
+        const maintenanceRes = await fetch("api/get_maintenance.php");
+        const maintenanceData = await maintenanceRes.json();
+
+        if (maintenanceData.maintenance == 1 && user.role !== "Director Human Resources") {
+
+            errorBox.innerText = "🔧 Site en maintenance";
+
+            if (typeof sendLog === "function") {
+                sendLog("Connexion refusée (maintenance)", user.username);
+            }
+
+            return;
+        }
+
+        /* ===== REMEMBER USERNAME ===== */
+
+        if (remember) {
+            localStorage.setItem("rememberedUser", userInput);
+        } else {
+            localStorage.removeItem("rememberedUser");
+        }
+
+        /* ===== LOGIN OK ===== */
+
+        localStorage.setItem("ulmUser", JSON.stringify(user));
+
+        if (typeof sendLog === "function") {
+            sendLog("Connexion", "Utilisateur connecté : " + user.username);
+        }
+
+        window.location.href = "dashboard.html";
+
+    } catch (error) {
+        console.error("Erreur serveur :", error);
+        errorBox.innerText = "Erreur serveur.";
+    }
+}
+
+</script>
+
+</body>
+</html>

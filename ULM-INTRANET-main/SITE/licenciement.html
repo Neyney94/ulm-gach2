@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Demande de Licenciement - ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=UZXkdqZTN0V_JptTrNLYVOsuRpvTFxGlv-zvL6CEJqyhEpWgpzDsxhTe631np1uqkqKqz5bfREOUiEKPE2nx1cKqRltl0xgzXroEQLty4k7C6LsF9g42Nmzhc74mewllunqwNWohYiSDA7as4SAOsJ6kFqIL-8a5cc6qAGvGHFObbxg7awSmDZF7aS-G1n-pMt-dsT0RJAGgNICzNzRcjw" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZsaWNlbmNpZW1lbnQuaHRtbA"/></head>
+
+<body class="contract-body">
+
+<!-- FLECHE RETOUR -->
+<div class="back-arrow" onclick="goBack()">
+    ← Retour
+</div>
+
+<div class="contract-container">
+
+    <div class="contract-form">
+
+        <h1 class="contract-title">DEMANDE DE LICENCIEMENT</h1>
+
+        <form id="licenciementForm">
+
+            <div class="form-group">
+                <label>Nom</label>
+                <input type="text" id="nom" required>
+            </div>
+
+            <div class="form-group">
+                <label>Prénom</label>
+                <input type="text" id="prenom" required>
+            </div>
+
+            <div class="form-group">
+                <label>Poste</label>
+                <input type="text" id="poste" required>
+            </div>
+
+            <div class="form-group">
+                <label>Date d'arrivée</label>
+                <input type="date" id="arrivee" required>
+            </div>
+
+            <div class="form-group">
+                <label>Raison du licenciement</label>
+                <textarea id="raison" rows="4" required></textarea>
+            </div>
+
+            <button type="submit" class="modern-btn">
+                Envoyer la demande
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+/* ================= PROTECTION LOGIN ================= */
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+if (!currentUser) {
+    window.location.href = "/";
+}
+
+/* ================= RETOUR ================= */
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+/* ================= ENVOI MYSQL ================= */
+
+document.getElementById("licenciementForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const nouvelleDemande = {
+        nom: document.getElementById("nom").value,
+        prenom: document.getElementById("prenom").value,
+        poste: document.getElementById("poste").value,
+        arrivee: document.getElementById("arrivee").value,
+        raison: document.getElementById("raison").value
+    };
+
+    try {
+
+        const response = await fetch("api/add_licenciement.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nouvelleDemande)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            if (typeof sendLog === "function") {
+                sendLog(
+                    "Nouvelle demande licenciement",
+                    nouvelleDemande.nom + " " + nouvelleDemande.prenom +
+                    " | Poste: " + nouvelleDemande.poste
+                );
+            }
+
+            alert("Demande de licenciement envoyée !");
+            this.reset();
+            window.location.href = "dashboard.html";
+
+        } else {
+            alert("Erreur : " + (result.error || "Envoi impossible"));
+        }
+
+    } catch (error) {
+        console.error("Erreur :", error);
+        alert("Erreur serveur.");
+    }
+
+});
+
+</script>
+
+<script src="logs.js"></script>
+
+</body>
+</html>

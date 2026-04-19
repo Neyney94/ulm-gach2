@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Gestion des Employés - ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=mbesFtCPaLj2rZNffJ6i-TQ8Ppkor2jwB-WglFyMWvzNW5zopaKz6ttLiBiwzQwkPBVzVDQkX5rolFC725MmTyhD2U1MBcojlDEFJ3ZJuk0k8t37Bdr-z-PoIqKKl8bcQC2V72VC8UPT0xRLPO51TILfiAejk834QOk4UZsgf5LEG1W19txILytcQB9VjLo2" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZlbXBsb3llcy5odG1s"/></head>
+
+<body>
+
+<div class="sidebar">
+    <h2 class="sidebar-title">
+        <img src="logo.png" alt="ULM Logo" class="sidebar-logo">
+        ULM
+    </h2>
+
+    <a href="dashboard.html">Accueil</a>
+    <a href="contrat.html">Demande de contrat</a>
+    <a href="employes.html">Créer un employé</a>
+    <a href="licenciement.html">Licenciement</a>
+    <a href="reception.html">Reception RH</a>
+    <a href="classement-admin.html">Classement</a>
+    <a href="admin-rh.html">Admin</a>
+    <a href="events.html">Events</a>
+
+    <button class="sidebar-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="main">
+
+<h1>Gestion des employés</h1>
+
+<!-- ================= RECHERCHE ================= -->
+
+<div class="form-card" style="margin-bottom:30px;">
+    <div class="form-group">
+        <label>🔎 Rechercher un employé</label>
+        <input type="text" id="searchInput" placeholder="Nom, prénom, artiste ou poste...">
+    </div>
+</div>
+
+<!-- ================= FORMULAIRE ================= -->
+
+<div class="form-card">
+<form id="employeeForm">
+
+<input type="hidden" id="editId">
+
+<div class="form-group">
+<label>Nom</label>
+<input type="text" id="nom" required>
+</div>
+
+<div class="form-group">
+<label>Prénom</label>
+<input type="text" id="prenom" required>
+</div>
+
+<div class="form-group">
+<label>Nom d'artiste</label>
+<input type="text" id="artiste" required>
+</div>
+
+<div class="form-group">
+<label>Poste</label>
+<input type="text" id="poste" required>
+</div>
+
+<div class="form-group">
+<label>IBAN</label>
+<input type="text" id="iban" required>
+</div>
+
+<div class="form-group">
+<label>Date d'arrivée</label>
+<input type="date" id="arrivee" required>
+</div>
+
+<button type="submit" class="modern-btn">
+Enregistrer
+</button>
+
+</form>
+</div>
+
+<!-- ================= LISTE ================= -->
+
+<div class="employee-list">
+<h2>Liste des employés</h2>
+<div id="employeeContainer"></div>
+</div>
+
+</div>
+
+<footer class="footer">
+© Tous droits réservés 2026
+</footer>
+
+<script>
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+
+if (!currentUser) window.location.href = "/";
+if (currentUser.role === "Manager" || currentUser.role === "CM") {
+    window.location.href = "dashboard.html";
+}
+
+let allEmployes = [];
+
+/* ================= LOAD ================= */
+
+async function loadEmployes() {
+
+    try {
+        const res = await fetch("api/get_employes.php");
+        allEmployes = await res.json();
+        renderEmployes(allEmployes);
+    } catch (error) {
+        console.error("Erreur chargement employés :", error);
+    }
+}
+
+/* ================= RENDER ================= */
+
+function renderEmployes(list) {
+
+    const container = document.getElementById("employeeContainer");
+    container.innerHTML = "";
+
+    if (!Array.isArray(list) || list.length === 0) {
+        container.innerHTML = "<p style='color:#777;'>Aucun employé trouvé.</p>";
+        return;
+    }
+
+    list.forEach(emp => {
+        container.innerHTML += `
+            <div class="employee-card">
+                <p><strong>${emp.nom} ${emp.prenom}</strong></p>
+                <p>Artiste : ${emp.artiste}</p>
+                <p>Poste : ${emp.poste}</p>
+                <p>IBAN : ${emp.iban}</p>
+                <p>Date d'arrivée : ${emp.arrivee}</p>
+
+                <div class="employee-actions">
+                    <button class="edit-btn" onclick="editEmploye(${emp.id})">
+                        ✏ Modifier
+                    </button>
+                    <button class="delete-btn" onclick="deleteEmploye(${emp.id})">
+                        🗑 Supprimer
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+/* ================= RECHERCHE LIVE ================= */
+
+document.getElementById("searchInput").addEventListener("input", function() {
+
+    const value = this.value.toLowerCase();
+
+    const filtered = allEmployes.filter(emp =>
+        emp.nom.toLowerCase().includes(value) ||
+        emp.prenom.toLowerCase().includes(value) ||
+        emp.artiste.toLowerCase().includes(value) ||
+        emp.poste.toLowerCase().includes(value)
+    );
+
+    renderEmployes(filtered);
+});
+
+/* ================= CREATE / UPDATE ================= */
+
+document.getElementById("employeeForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const id = editId.value;
+
+    const data = {
+        id,
+        nom: nom.value,
+        prenom: prenom.value,
+        artiste: artiste.value,
+        poste: poste.value,
+        iban: iban.value,
+        arrivee: arrivee.value
+    };
+
+    const url = id ? "api/update_employe.php" : "api/add_employe.php";
+
+    await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    sendLog(id ? "Modification employé" : "Création employé",
+            data.nom + " " + data.prenom);
+
+    this.reset();
+    editId.value = "";
+
+    loadEmployes();
+});
+
+/* ================= DELETE ================= */
+
+async function deleteEmploye(id) {
+
+    if (!confirm("Voulez-vous vraiment supprimer cet employé ?")) return;
+
+    await fetch("api/delete_employe.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+
+    sendLog("Suppression employé", "ID: " + id);
+
+    loadEmployes();
+}
+
+/* ================= EDIT ================= */
+
+function editEmploye(id) {
+
+    const emp = allEmployes.find(e => e.id == id);
+
+    nom.value = emp.nom;
+    prenom.value = emp.prenom;
+    artiste.value = emp.artiste;
+    poste.value = emp.poste;
+    iban.value = emp.iban;
+    arrivee.value = emp.arrivee;
+
+    editId.value = id;
+}
+
+/* ================= LOGOUT ================= */
+
+function logout() {
+    localStorage.removeItem("ulmUser");
+    window.location.href = "index.html";
+}
+
+/* ================= INIT ================= */
+
+document.addEventListener("DOMContentLoaded", loadEmployes);
+
+</script>
+
+<script src="logs.js"></script>
+
+</body>
+</html>

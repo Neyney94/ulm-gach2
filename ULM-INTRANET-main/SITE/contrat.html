@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Demande de Contrat RH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=-FfbCQ-0MNmy_J9HkP4sBlxneNMPeOhtNEcIRvASUOND5IT-O3og8lr98f7ceodd7N4l6jBksHQDGbWDSV6KWr3AzefJaxXULoPxDTQ90zEy05Z9VTKIn9LRYg4Av2z_1_sBbU_l-zOtyC7jOo08rKOdUjYt-touwKahvcaC_v_zs3FIFrPh7Py_kKwDhewm" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZjb250cmF0Lmh0bWw"/></head>
+
+<body class="contract-body">
+
+<!-- FLECHE RETOUR -->
+<div class="back-arrow" onclick="goBack()">
+    ← Retour
+</div>
+
+<div class="contract-container">
+
+    <div class="contract-form">
+
+        <h1 class="contract-title">DEMANDE DE CONTRAT RH</h1>
+
+        <form id="contractForm">
+
+            <div class="form-group">
+                <label>Nom</label>
+                <input type="text" id="nom" required>
+            </div>
+
+            <div class="form-group">
+                <label>Prénom</label>
+                <input type="text" id="prenom" required>
+            </div>
+
+            <div class="form-group">
+                <label>Pseudo artiste</label>
+                <input type="text" id="pseudo" required>
+            </div>
+
+            <div class="form-group">
+                <label>Poste de l'employé</label>
+                <input type="text" id="poste" required>
+            </div>
+
+            <div class="form-group">
+                <label>Date de naissance</label>
+                <input type="date" id="date" required>
+            </div>
+
+            <button type="submit" class="modern-btn">
+                Envoyer la demande
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+/* ================= PROTECTION LOGIN ================= */
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+
+if (!currentUser) {
+    window.location.href = "/";
+}
+
+/* ================= RETOUR ================= */
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+/* ================= ENVOI FORMULAIRE MYSQL ================= */
+
+document.getElementById("contractForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const nouvelleDemande = {
+        nom: document.getElementById("nom").value,
+        prenom: document.getElementById("prenom").value,
+        pseudo: document.getElementById("pseudo").value,
+        poste: document.getElementById("poste").value,
+        date_naissance: document.getElementById("date").value
+    };
+
+    try {
+
+        const response = await fetch("api/add_contrat.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nouvelleDemande)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            if (typeof sendLog === "function") {
+                sendLog(
+                    "Nouvelle demande contrat",
+                    nouvelleDemande.nom + " " + nouvelleDemande.prenom +
+                    " | Poste: " + nouvelleDemande.poste
+                );
+            }
+
+            alert("Demande envoyée avec succès !");
+            this.reset();
+            window.location.href = "dashboard.html";
+
+        } else {
+            alert("Erreur : " + (result.error || "Envoi impossible"));
+        }
+
+    } catch (error) {
+        console.error("Erreur:", error);
+        alert("Erreur serveur.");
+    }
+
+});
+
+</script>
+
+<script src="logs.js"></script>
+
+</body>
+</html>

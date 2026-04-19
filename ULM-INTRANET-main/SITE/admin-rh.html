@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Admin RH - ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=EaM4Cx0sEB7dxt6WbFa9dqVkEoMkwXCbX2lAQKy-LHJFbPsTcIP9tVl-n6xpemLk9isLQrTUv_M9ZJrX0oTJ3Z20W1x-bsb7EAaitHA7c6zk0azy7k7EuU32QngleUXaKqwBdIwDoaZQoFQhtqGoTmWvTuejNgTRv0uvz0ew5_JmMJ-KF6mEJHB6pLb4QClU" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZhZG1pbi1yaC5odG1s"/></head>
+
+<body>
+
+<script>
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+
+if (!currentUser || currentUser.role !== "Director Human Resources") {
+    alert("⛔ Accès interdit");
+    window.location.href = "dashboard.html";
+}
+</script>
+
+<div class="sidebar">
+    <h2 class="sidebar-title">
+        <img src="logo.png" class="sidebar-logo">
+        ADMIN RH
+    </h2>
+
+    <a href="dashboard.html">← Retour Dashboard</a>
+
+    <button class="sidebar-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="main">
+
+<h1>📊 Panneau Director Human Resources</h1>
+
+<!-- ================= STATISTIQUES ================= -->
+
+<div class="stats-grid">
+
+    <div class="stat-box">
+        <h3 id="statUsers">0</h3>
+        <p>Utilisateurs</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statContrats">0</h3>
+        <p>Demandes de contrat</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statLicenciements">0</h3>
+        <p>Demandes de licenciement</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statEvents">0</h3>
+        <p>Événements</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statEmployes">0</h3>
+        <p>Employés</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statMusic">0</h3>
+        <p>Demandes de sons</p>
+    </div>
+
+    <div class="stat-box">
+        <h3 id="statRanking">0</h3>
+        <p>Artistes classés</p>
+    </div>
+
+</div>
+
+<!-- ================= MAINTENANCE ================= -->
+
+<div class="ranking-section">
+    <h1>🛠 Mode Maintenance</h1>
+
+    <div class="employee-card" style="text-align:center;">
+        <p id="maintenanceStatus" style="margin-bottom:20px;"></p>
+
+        <button class="modern-btn" onclick="toggleMaintenance()">
+            Activer / Désactiver Maintenance
+        </button>
+    </div>
+</div>
+
+<!-- ================= LOGS ================= -->
+
+<div class="ranking-section">
+    <h1>📜 Logs du Site</h1>
+
+    <div class="employee-card" style="max-height:350px; overflow:auto;">
+        <div id="logsContainer"></div>
+    </div>
+</div>
+
+<!-- ================= GESTION UTILISATEURS ================= -->
+
+<div class="ranking-section">
+    <h1>👥 Gestion des utilisateurs</h1>
+
+    <div class="contract-form" style="margin-bottom:30px;">
+        <form id="userForm">
+
+            <div class="form-group">
+                <label>Nom d'utilisateur</label>
+                <input type="text" id="newUsername" required>
+            </div>
+
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="newPassword" required>
+            </div>
+
+            <div class="form-group">
+                <label>Rôle (écris-le manuellement)</label>
+                <input type="text" id="newRole" placeholder="Ex: Manager, CM, Director Human Resources..." required>
+            </div>
+
+            <button type="submit" class="modern-btn">
+                Créer l'utilisateur
+            </button>
+
+        </form>
+    </div>
+
+    <div class="employee-card" style="max-height:400px; overflow:auto;">
+        <div id="usersContainer"></div>
+    </div>
+</div>
+
+</div>
+
+<script>
+
+/* ================= LOAD STATS ================= */
+
+async function loadStats() {
+    const res = await fetch("api/get_stats.php");
+    const data = await res.json();
+
+    document.getElementById("statUsers").innerText = data.users;
+    document.getElementById("statContrats").innerText = data.contrats;
+    document.getElementById("statLicenciements").innerText = data.licenciements;
+    document.getElementById("statEvents").innerText = data.events;
+    document.getElementById("statEmployes").innerText = data.employes;
+    document.getElementById("statMusic").innerText = data.music;
+    document.getElementById("statRanking").innerText = data.ranking;
+}
+
+/* ================= LOAD LOGS ================= */
+
+async function loadLogs() {
+
+    const res = await fetch("api/get_logs.php");
+    const logs = await res.json();
+
+    const container = document.getElementById("logsContainer");
+    container.innerHTML = "";
+
+    if (!logs.length) {
+        container.innerHTML = "<p>Aucun log enregistré.</p>";
+        return;
+    }
+
+    logs.forEach(log => {
+        container.innerHTML += `
+            <div style="
+                background:#151515;
+                border:1px solid #222;
+                padding:10px;
+                border-radius:8px;
+                margin-bottom:10px;
+                font-size:13px;">
+                <strong>${log.date_log}</strong><br>
+                👤 ${log.user} (${log.role})<br>
+                ⚡ ${log.action}<br>
+                📄 ${log.details}
+            </div>
+        `;
+    });
+}
+
+/* ================= LOAD USERS ================= */
+
+async function loadUsers() {
+
+    const res = await fetch("api/get_users.php");
+    const users = await res.json();
+
+    const container = document.getElementById("usersContainer");
+    container.innerHTML = "";
+
+    if (!users.length) {
+        container.innerHTML = "<p>Aucun utilisateur enregistré.</p>";
+        return;
+    }
+
+    users.forEach(user => {
+        container.innerHTML += `
+            <div style="
+                background:#151515;
+                border:1px solid #222;
+                padding:10px;
+                border-radius:8px;
+                margin-bottom:10px;
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            ">
+                <div>
+                    <strong>${user.username}</strong><br>
+                    <span style="color:#888;">${user.role}</span>
+                </div>
+
+                <button class="delete-btn" onclick="deleteUser(${user.id})">
+                    🗑 Supprimer
+                </button>
+            </div>
+        `;
+    });
+}
+
+/* ================= CREATE USER ================= */
+
+document.getElementById("userForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const data = {
+        username: document.getElementById("newUsername").value,
+        password: document.getElementById("newPassword").value,
+        role: document.getElementById("newRole").value
+    };
+
+    await fetch("api/add_user.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    if (typeof sendLog === "function") {
+        sendLog("Création utilisateur", data.username + " | Rôle : " + data.role);
+    }
+
+    this.reset();
+    loadUsers();
+});
+
+/* ================= DELETE USER ================= */
+
+async function deleteUser(id) {
+
+    if (!confirm("Supprimer cet utilisateur ?")) return;
+
+    await fetch("api/delete_user.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+
+    if (typeof sendLog === "function") {
+        sendLog("Suppression utilisateur", "ID: " + id);
+    }
+
+    loadUsers();
+}
+
+/* ================= MAINTENANCE ================= */
+
+async function loadMaintenance() {
+    const res = await fetch("api/get_maintenance.php");
+    const data = await res.json();
+    updateMaintenanceUI(data.maintenance);
+}
+
+async function toggleMaintenance() {
+
+    const res = await fetch("api/toggle_maintenance.php");
+    const data = await res.json();
+
+    if (data.success) {
+        updateMaintenanceUI(data.maintenance);
+
+        if (typeof sendLog === "function") {
+            sendLog(
+                data.maintenance ? "Maintenance activée" : "Maintenance désactivée",
+                "Modification du statut du site"
+            );
+        }
+    }
+}
+
+function updateMaintenanceUI(status) {
+
+    const text = document.getElementById("maintenanceStatus");
+
+    if (status == 1) {
+        text.innerHTML = "🔴 Le site est actuellement en maintenance";
+        text.style.color = "#ff4d4d";
+    } else {
+        text.innerHTML = "🟢 Le site est en ligne";
+        text.style.color = "#00ff99";
+    }
+}
+
+/* ================= LOGOUT ================= */
+
+function logout() {
+    localStorage.removeItem("ulmUser");
+    window.location.href = "index.html";
+}
+
+/* ================= INIT ================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadStats();
+    loadLogs();
+    loadMaintenance();
+    loadUsers();
+});
+
+</script>
+
+<script src="logs.js"></script>
+
+</body>
+</html>

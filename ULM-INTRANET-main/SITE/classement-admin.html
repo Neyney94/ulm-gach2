@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Modifier Classement - ULM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=4Cb41gJg1KgSvhTZF1VyXnmTaRGTkFNLbuzmijvvkALse1kY_vWu119gc_YIGVA2kuel4G_8oUQ_q87KQcBPb_fgR6XXy4FmAVPGK2-haq3p_E1yDoqCQlD22NZv-snP1lS55GfbSbr382FREaL6nEa1ic3c-Ex0IRHETI5ud56ae0z3gMTlFXBGpKJ_rLJZ24T2S70nqk9-uAKs-sQNTQ" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly93ZWIwMS55b3JraG9zdC5mcjoyMDgzL2Nwc2VzczU2ODQyMjI5MzQvZG93bmxvYWQ_c2tpcGVuY29kZT0xJmZpbGU9JTJmaG9tZSUyZnVsbXJlY29yJTJmcHVibGljX2h0bWwlMmZjbGFzc2VtZW50LWFkbWluLmh0bWw"/><script src="logs.js"></script>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <h2 class="sidebar-title">
+        <img src="logo.png" alt="ULM Logo" class="sidebar-logo">
+        ULM
+    </h2>
+
+    <a href="dashboard.html">Accueil</a>
+    <a href="contrat.html" id="linkContrat">Demande de contrat</a>
+    <a href="employes.html" id="linkEmployes">Créer un employé</a>
+    <a href="licenciement.html" id="linkLicenciement">Licenciement</a>
+    <a href="reception.html" id="linkReception">Reception RH</a>
+    <a href="classement-admin.html">Classement</a>
+    <a href="#" onclick="openAdmin()">Admin</a>
+    <a href="events.html">Events</a>
+
+    <button class="sidebar-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="main">
+
+<h1>🏆 Modifier le Classement</h1>
+
+<div class="contract-form">
+
+<form id="rankingForm">
+
+<div id="rankingInputs"></div>
+
+<button type="submit" class="modern-btn">
+Sauvegarder le classement
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+<script>
+
+
+
+/* ================= LOGIN ================= */
+
+const currentUser = JSON.parse(localStorage.getItem("ulmUser"));
+
+if (!currentUser) {
+    window.location.href = "/";
+}
+
+/* ================= ACCÈS MANAGER BLOQUÉ ================= */
+
+if (currentUser.role === "Manager") {
+    document.body.innerHTML = `
+        <div style="
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            background:#0f0f0f;
+            color:#ff4d4d;
+            font-family:Poppins;
+            font-size:20px;">
+            🚫 Accès interdit
+        </div>
+    `;
+}
+
+
+/* ================= LOAD RANKING MYSQL ================= */
+
+async function loadRanking() {
+
+    const res = await fetch("api/get_ranking.php");
+    const ranking = await res.json();
+
+    const container = document.getElementById("rankingInputs");
+    container.innerHTML = "";
+
+    if (!ranking.length) {
+        for (let i = 0; i < 5; i++) {
+            container.innerHTML += generateInput(i, "Artiste " + (i+1), "0 streams");
+        }
+        return;
+    }
+
+    ranking.forEach((artist, index) => {
+        container.innerHTML += generateInput(index, artist.name, artist.streams);
+    });
+}
+
+function generateInput(index, name, streams) {
+    return `
+        <div class="form-group">
+            <label>#${index + 1} Nom</label>
+            <input type="text" id="name${index}" value="${name}" required>
+        </div>
+
+        <div class="form-group">
+            <label>#${index + 1} Streams</label>
+            <input type="text" id="streams${index}" value="${streams}" required>
+        </div>
+    `;
+}
+
+/* ================= SAVE ================= */
+
+document.getElementById("rankingForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    let newRanking = [];
+
+    for (let i = 0; i < 5; i++) {
+        newRanking.push({
+            name: document.getElementById("name"+i).value,
+            streams: document.getElementById("streams"+i).value
+        });
+    }
+
+    await fetch("api/save_ranking.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newRanking)
+    });
+
+    if (typeof sendLog === "function") {
+        sendLog("Modification classement", "Classement mis à jour");
+    }
+
+    alert("Classement mis à jour !");
+});
+
+/* ================= LOGOUT ================= */
+
+function logout() {
+    localStorage.removeItem("ulmUser");
+    window.location.href = "index.html";
+}
+
+document.addEventListener("DOMContentLoaded", loadRanking);
+
+/* ================= ROLES ================= */
+
+if (currentUser.role === "Manager") {
+    linkEmployes.style.display = "none";
+    linkReception.style.display = "none";
+    linkClassement.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+if (currentUser.role === "CM") {
+    linkContrat.style.display = "none";
+    linkEmployes.style.display = "none";
+    linkLicenciement.style.display = "none";
+    linkReception.style.display = "none";
+    contratBox.classList.remove("clickable");
+    licenciementBox.classList.remove("clickable");
+    contratBox.onclick = null;
+    licenciementBox.onclick = null;
+}
+
+/* ================= NAVIGATION ================= */
+
+function goReception() {
+    if (currentUser.role === "Admin" || currentUser.role === "Director Human Resources") {
+        window.location.href = "reception.html";
+    }
+}
+
+function openAdmin() {
+    if (currentUser.role !== "Director Human Resources") {
+        showAccessDenied();
+        return;
+    }
+    window.location.href = "admin-rh.html";
+}
+
+function showAccessDenied() {
+
+    const notif = document.createElement("div");
+    notif.innerText = "🚫 Accès interdit";
+
+    notif.style.position = "fixed";
+    notif.style.top = "20px";
+    notif.style.right = "20px";
+    notif.style.background = "#151515";
+    notif.style.color = "#ff4d4d";
+    notif.style.padding = "15px 20px";
+    notif.style.border = "1px solid #ff4d4d";
+    notif.style.borderRadius = "10px";
+    notif.style.boxShadow = "0 0 15px rgba(255,0,0,0.3)";
+    notif.style.zIndex = "9999";
+    notif.style.fontSize = "14px";
+
+    document.body.appendChild(notif);
+
+    setTimeout(() => notif.remove(), 2500);
+}
+
+</script>
+
+</body>
+</html>
